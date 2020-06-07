@@ -19,8 +19,12 @@ public class MainActivity extends AppCompatActivity {
 
 
         JavaReflection reflection = new JavaReflection();
+
         reflection.loadRaonApi(inputCurrentMethod, getApplication(),
                 this, now);
+
+
+        //reflection.activityCall(getApplication(), this);
 
     }
 }

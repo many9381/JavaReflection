@@ -3,11 +3,10 @@ package choi.javareflection;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
-
-import androidx.fragment.app.FragmentActivity;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -93,14 +92,14 @@ public class JavaReflection {
 
                     Class<?> pluginClass = classLoader.loadClass(String.format("choi.security.%s", polyLibName));
 
-
                     String parentMethodName = currentClassMethod.split("-")[1];
                     logsSave(parentMethodName, filePath, act);
 
                     // method invoke
-                    Object obj = pluginClass.newInstance();
 
-                    Class[] params = null;
+                    Object obj = pluginClass.getDeclaredConstructors()[0].newInstance();
+
+                    Object[] params = null;
                     Method[] methods = pluginClass.getDeclaredMethods();
 
                     Method method = null;
@@ -112,10 +111,11 @@ public class JavaReflection {
                     }
 
 
-                    if (method != null) {
-                        method.setAccessible(true);
-                        method.invoke(obj, pluginContext, act, params);
-                    }
+                    //params = new Object[]{myLayout};
+
+
+                    method.setAccessible(true);
+                    method.invoke(obj, pluginContext, act, params);
 
                     /*
                     Method method = pluginClass.getMethod(polyFuncName);
@@ -152,8 +152,16 @@ public class JavaReflection {
 
     }
 
-    private void activityCall(Context context, Activity act) {
-        try {
+    public void activityCall(Context context, Activity act) {
+
+        ComponentName component = new ComponentName("choi.security","choi.security.MainActivity");
+        Intent intent = new Intent(Intent.ACTION_MAIN)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addCategory(Intent.CATEGORY_LAUNCHER)
+                .setComponent(component);
+        context.startActivity(intent);
+
+            /*
             Class className = Class.forName("android.content.Intent");
             ComponentName component = new ComponentName("com.example.security","com.example.security.MainActivity");
             Object intent = className.newInstance();
@@ -167,46 +175,8 @@ public class JavaReflection {
 
             // TODO: 이렇게 강제 캐스팅 가능한지 확인 필요
             context.startActivity((android.content.Intent) intent);
-            
-
-            /*
-            intent3 = Intent(Intent.ACTION_MAIN);
-            intent3.addCategory(Intent.CATEGORY_LAUNCHER);
-            intent3.setComponent(component)
-            context.startActivity(intent3)
-             */
-
-            /*
-
-            val component = ComponentName("com.example.security","com.example.security.MainActivity")
-            val intent3 = Intent(Intent.ACTION_MAIN);
-            intent3.addCategory(Intent.CATEGORY_LAUNCHER);
-            intent3.setComponent(component)
-            context.startActivity(intent3)
-
-            val intent2 = context.packageManager.getLaunchIntentForPackage("com.example.security")
-            intent2?.setAction(Intent.ACTION_MAIN)
 
              */
-
-            /*
-            val intent = Intent("android.intent.action.MAIN2")
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            context.startActivity((android.content.Intent) intent);
-
-             */
-
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }
     }
 
     /*
