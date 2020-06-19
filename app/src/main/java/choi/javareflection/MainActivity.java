@@ -3,6 +3,7 @@ package choi.javareflection;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+import android.util.Log;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -20,7 +21,7 @@ public class MainActivity extends AppCompatActivity {
 
         JavaReflection reflection = new JavaReflection();
 
-        reflection.loadRaonApi(inputCurrentMethod, getApplication(),
+        reflection.loadRaonApi(inputCurrentMethod, getApplicationContext(),
                 this, now);
 
 

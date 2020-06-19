@@ -15,12 +15,17 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+
+import dalvik.system.PathClassLoader;
 
 
 public class JavaReflection {
@@ -36,17 +41,18 @@ public class JavaReflection {
         }
     }
 
-    public void loadRaonApi(String currentClassMethod, Context context, Activity act, Long start) {
+    //activityCall(context, act);
 
-        String filePath = context.getFilesDir().getPath();
+    public ArrayList<String[]> temp_raw(Context context) {
 
-        //activityCall(context, act);
-        try {
+        InputStream polyFile = context.getResources().openRawResource(R.raw.sample);
+        ArrayList<String[]> policyLine = new ArrayList<String[]>();
 
-            ArrayList<String[]> policyLine = new ArrayList<String[]>();
+        if (polyFile != null) {
 
-            FileInputStream fin = context.openFileInput("sample.txt");
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fin));
+            InputStreamReader stream = new InputStreamReader(polyFile, StandardCharsets.UTF_8);
+            BufferedReader bufferedReader = new BufferedReader(stream);
+
 
             while(true) {
                 try {
@@ -64,6 +70,25 @@ public class JavaReflection {
                     e.printStackTrace();
                 }
             }
+        }
+
+        return policyLine;
+
+    }
+
+    public void loadRaonApi(String currentClassMethod, Context context, Activity act, Long start) {
+
+        String filePath = context.getFilesDir().getPath();
+
+        activityCall2(context, act, "MainActivity");
+
+        try {
+
+            //ArrayList<String[]> policyLine = new ArrayList<String[]>();
+            ArrayList<String[]> policyLine = null;
+
+            //temp_sample(filePath);
+            policyLine = temp_raw(context);
 
 
             for (String[] str: policyLine) {
@@ -77,28 +102,22 @@ public class JavaReflection {
                 // MainActivity-method pirivate onCreate() 와 비교
                 String policyClsMethod = String.format("%s-%s", polyClsName, polyMethodName);
                 if (policyClsMethod.equals(currentClassMethod)) {
-                    Log.e(CLASS_TAG, String.format("matching: %s : %s", polyClsName, currentClassMethod));
+                    Log.e(CLASS_TAG, String.format("matching: %s : %s",
+                            polyClsName, currentClassMethod));
 
-                    /*
-                    String CLASS_NAME = String.format("etri.security.%s", polyLibName);
-                    Class<?> cls = Class.forName(CLASS_NAME);
-                    Log.e(CLASS_TAG, "CLASS_NAME: " + cls.getName());
-
-                     */
-
-                    Context pluginContext = getPackageContext(context, "choi.security");
+                    Context pluginContext =
+                            getPackageContext(context, "choi.security");
                     if (pluginContext == null) return;
                     ClassLoader classLoader = pluginContext.getClassLoader();
 
-                    Class<?> pluginClass = classLoader.loadClass(String.format("choi.security.%s", polyLibName));
+                    Class<?> pluginClass =
+                            classLoader.loadClass(String.format("choi.security.%s", polyLibName));
 
                     String parentMethodName = currentClassMethod.split("-")[1];
                     logsSave(parentMethodName, filePath, act);
 
                     // method invoke
-
                     Object obj = pluginClass.getDeclaredConstructors()[0].newInstance();
-
                     Object[] params = null;
                     Method[] methods = pluginClass.getDeclaredMethods();
 
@@ -109,10 +128,6 @@ public class JavaReflection {
                             break;
                         }
                     }
-
-
-                    //params = new Object[]{myLayout};
-
 
                     method.setAccessible(true);
                     method.invoke(obj, pluginContext, act, params);
@@ -137,7 +152,7 @@ public class JavaReflection {
                 Log.e("reflection", String.format("Process Time(not): %d", end - start));
             }
 
-        } catch (ClassNotFoundException | FileNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             e.printStackTrace();
         } catch (IllegalAccessException e) {
             e.printStackTrace();
@@ -152,16 +167,19 @@ public class JavaReflection {
 
     }
 
-    public void activityCall(Context context, Activity act) {
+    public void activityCall(Context context, Activity act, final String actName) {
 
-        ComponentName component = new ComponentName("choi.security","choi.security.MainActivity");
+        final String clsName =  "choi.security";
+        ComponentName component =
+                new ComponentName(clsName, String.format("%s.%s", clsName, actName));
         Intent intent = new Intent(Intent.ACTION_MAIN)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .addCategory(Intent.CATEGORY_LAUNCHER)
                 .setComponent(component);
         context.startActivity(intent);
 
-            /*
+
+        /*
             Class className = Class.forName("android.content.Intent");
             ComponentName component = new ComponentName("com.example.security","com.example.security.MainActivity");
             Object intent = className.newInstance();
@@ -176,7 +194,39 @@ public class JavaReflection {
             // TODO: 이렇게 강제 캐스팅 가능한지 확인 필요
             context.startActivity((android.content.Intent) intent);
 
-             */
+         */
+
+
+    }
+
+    private void activityCall2(Context context, Activity act, final String actName) {
+
+        final String packagePath =  "choi.security";
+        final String classPath =  String.format("%s.%s", packagePath, actName);
+
+        try {
+            String apkName = context.getPackageManager().getApplicationInfo(
+                    packagePath, 0).sourceDir;
+            PathClassLoader pathClassLoader = new PathClassLoader(apkName,
+                    ClassLoader.getSystemClassLoader());
+            Class<Activity> handler = (Class<Activity>) Class.forName(
+                    classPath, true, pathClassLoader);
+            Method[] mm = handler.getDeclaredMethods();
+
+            for (Method m : mm) {
+                Log.d("Method", m.getName());
+            }
+
+            Method method = mm[0];
+
+            method.setAccessible(true);
+            //Object tttt = method.invoke(handler.newInstance(), new android.os.Bundle());
+            Object tttt = method.invoke(handler.newInstance());
+
+            Log.d("test" ,"test") ;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /*
