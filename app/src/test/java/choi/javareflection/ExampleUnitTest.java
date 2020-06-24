@@ -1,4 +1,4 @@
-package choi.javareflection;
+package choi.javareflection23;
 
 import org.junit.Test;
 

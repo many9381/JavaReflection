@@ -1,7 +1,6 @@
 package choi.javareflection;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
 public class MainActivity extends AppCompatActivity {
@@ -20,11 +19,13 @@ public class MainActivity extends AppCompatActivity {
 
         JavaReflection reflection = new JavaReflection();
 
-        reflection.loadRaonApi(inputCurrentMethod, getApplication(),
-                this, now);
+        //getApplicationContext().getClass();
+        //Context test = MainActivity.this;
+
+        reflection.loadRaonApi(inputCurrentMethod, this,  now);
 
 
-        //reflection.activityCall(getApplication(), this);
 
+        //reflection.activityCall(this, "MainActivity");
     }
 }
