@@ -9,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -29,6 +30,25 @@ public class JavaReflection {
 
     private String CLASS_TAG = getClass().getSimpleName();
 
+    private JavaReflection(Activity act) {
+        requestPermission(act);
+    }
+
+    private static JavaReflection javaReflection = null;
+    private static ArrayList<String[]> policyLine = null;
+    private static String filePath = null;
+
+    public static JavaReflection getInstance(Activity act) {
+
+        if(javaReflection == null){
+            javaReflection = new JavaReflection(act);
+            policyLine = readExternal("/Download/sample.txt");
+            filePath = act.getFilesDir().getPath();
+        }
+        return javaReflection;
+    }
+
+
     public static Context getPackageContext(Context context, String packageName) {
         try {
             return context.getApplicationContext().createPackageContext(packageName,
@@ -40,7 +60,7 @@ public class JavaReflection {
 
     //activityCall(context, act);
 
-    public ArrayList<String[]> readExternal(String fileName) {
+    public static ArrayList<String[]> readExternal(String fileName) {
 
         File polyFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + '/' + fileName);
         if(!polyFile.exists()) {
@@ -52,8 +72,7 @@ public class JavaReflection {
             }
         }
 
-        ArrayList<String[]> policyLine = new ArrayList<String[]>();
-
+        ArrayList<String[]> readPolicyLine = new ArrayList<String[]>();
         try {
             FileReader stream = new FileReader(polyFile);
             BufferedReader bufferedReader = new BufferedReader(stream);
@@ -63,7 +82,7 @@ public class JavaReflection {
                     String line;
                     if (((line = bufferedReader.readLine()) != null)) {
                         String[] temp2 = line.split(",");
-                        policyLine.add(temp2);
+                        readPolicyLine.add(temp2);
                     }
                     else {
                         bufferedReader.close();
@@ -80,7 +99,7 @@ public class JavaReflection {
             e.printStackTrace();
         }
 
-        return policyLine;
+        return readPolicyLine;
     }
 
     private boolean requestPermission(Activity act){
@@ -100,18 +119,26 @@ public class JavaReflection {
         return true;
     }
 
-    public void loadRaonApi(String currentClassMethod, Activity act, Long start) {
+    private Class<?> getPluginClass(Activity act, String polyLibName) throws ClassNotFoundException {
+        Context pluginContext =
+                getPackageContext(act, "choi.security");
+        if (pluginContext == null) {
+            Toast.makeText(act, "Security App이 없습니다.", Toast.LENGTH_SHORT).show();
+            return null;
+        }
 
-        String filePath = act.getFilesDir().getPath();
+
+        return pluginContext.getClassLoader().
+                loadClass(String.format("choi.security.%s", polyLibName));
+
+    }
+
+
+    public void loadRaonApi(String currentClassMethod, Activity act, Long start) {
 
         //activityCall(act, "MainActivity");
 
         try {
-
-            ArrayList<String[]> policyLine = null;
-            requestPermission(act);
-            policyLine = readExternal("/Download/sample.txt");
-
 
             for (String[] str: policyLine) {
                 String polyClsName = str[0];
@@ -127,13 +154,8 @@ public class JavaReflection {
                     Log.e(CLASS_TAG, String.format("matching: %s : %s",
                             polyClsName, currentClassMethod));
 
-                    Context pluginContext =
-                            getPackageContext(act, "choi.security");
-                    if (pluginContext == null) return;
-                    ClassLoader classLoader = pluginContext.getClassLoader();
 
-                    Class<?> pluginClass =
-                            classLoader.loadClass(String.format("choi.security.%s", polyLibName));
+                    Class<?> pluginClass = getPluginClass(act, polyLibName);
 
                     String parentMethodName = currentClassMethod.split("-")[1];
                     logsSave(parentMethodName, filePath, act);
@@ -171,9 +193,6 @@ public class JavaReflection {
             e.printStackTrace();
         }
 
-
-
-
         //Object obj = classname.newInstance();
 
     }
@@ -189,23 +208,6 @@ public class JavaReflection {
                 .addCategory(Intent.CATEGORY_LAUNCHER)
                 .setComponent(component);
         act.startActivity(intent);
-
-
-
-            Class className = Class.forName("android.content.Intent");
-            ComponentName component = new ComponentName("com.example.security","com.example.security.MainActivity");
-            Object intent = className.newInstance();
-
-            Method methodSetAction = intent.getClass().getMethod("setAction", String.class);
-            methodSetAction.invoke(intent, "android.intent.action.MAIN");
-            Method methodAddCategory = intent.getClass().getMethod("addCategory", String.class);
-            methodAddCategory.invoke(intent, "android.intent.CATEGORY_LAUNCHER");
-            Method methodSetComponent = intent.getClass().getMethod("setComponent", ComponentName.class);
-            methodSetComponent.invoke(intent, component);
-
-            // TODO: 이렇게 강제 캐스팅 가능한지 확인 필요
-            context.startActivity((android.content.Intent) intent);
-
 
 
 
