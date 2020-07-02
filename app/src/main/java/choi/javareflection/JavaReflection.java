@@ -29,16 +29,21 @@ import dalvik.system.PathClassLoader;
 public class JavaReflection {
 
     private String CLASS_TAG = getClass().getSimpleName();
+    private static JavaReflection javaReflection = null;
+    private static ArrayList<String[]> policyLine = null;
+    private static String filePath = null;
+
+
 
     private JavaReflection(Activity act) {
         requestPermission(act);
     }
 
-    private static JavaReflection javaReflection = null;
-    private static ArrayList<String[]> policyLine = null;
-    private static String filePath = null;
-
-    public static JavaReflection getInstance(Activity act) {
+    /*
+        불필요하게 자주 반복되는 작업을 줄이기 위한
+        Singletone 클래스
+     */
+   public static JavaReflection getInstance(Activity act) {
 
         if(javaReflection == null){
             javaReflection = new JavaReflection(act);
@@ -47,6 +52,8 @@ public class JavaReflection {
         }
         return javaReflection;
     }
+
+
 
 
     public static Context getPackageContext(Context context, String packageName) {
@@ -60,6 +67,11 @@ public class JavaReflection {
 
     //activityCall(context, act);
 
+
+    /*
+        외부 저장소에 있는 정책파일을 읽는 함수
+        줄 단위로 읽어서 ArrayList<String> 형태로 리
+     */
     public static ArrayList<String[]> readExternal(String fileName) {
 
         File polyFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + '/' + fileName);
@@ -102,6 +114,10 @@ public class JavaReflection {
         return readPolicyLine;
     }
 
+    /*
+        외부 저장소에 접근하려면 권한이 필요하므로
+        필요한 권한 요청을 하기위한 함수
+     */
     private boolean requestPermission(Activity act){
 
         if (act.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -119,6 +135,9 @@ public class JavaReflection {
         return true;
     }
 
+    /*
+        보안 앱의 Context를 얻는 함수
+     */
     private Class<?> getPluginClass(Activity act, String polyLibName) throws ClassNotFoundException {
         Context pluginContext =
                 getPackageContext(act, "choi.security");
@@ -134,9 +153,14 @@ public class JavaReflection {
     }
 
 
+    /*
+        보안 앱의 기능을 호출하는 함수
+     */
     public void loadRaonApi(String currentClassMethod, Activity act, Long start) {
 
         //activityCall(act, "MainActivity");
+
+
 
         try {
 
@@ -183,67 +207,14 @@ public class JavaReflection {
                 Log.e("reflection", String.format("Process Time(not): %d", end - start));
             }
 
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
+        } catch (ClassNotFoundException | IllegalAccessException |
+                InvocationTargetException | InstantiationException e) {
             e.printStackTrace();
         }
 
         //Object obj = classname.newInstance();
 
     }
-
-    /*
-    public void activityCall(Activity act, final String actName) {
-
-        final String clsName =  "choi.security";
-        ComponentName component =
-                new ComponentName(clsName, String.format("%s.%s", clsName, actName));
-        Intent intent = new Intent(Intent.ACTION_MAIN)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addCategory(Intent.CATEGORY_LAUNCHER)
-                .setComponent(component);
-        act.startActivity(intent);
-
-
-
-    }
-
-    private void activityCall2(Context context, Activity act, final String actName) {
-
-        final String packagePath =  "choi.security";
-        final String classPath =  String.format("%s.%s", packagePath, actName);
-
-        try {
-            String apkName = context.getPackageManager().getApplicationInfo(
-                    packagePath, 0).sourceDir;
-            PathClassLoader pathClassLoader = new PathClassLoader(apkName,
-                    ClassLoader.getSystemClassLoader());
-            Class<Activity> handler = (Class<Activity>) Class.forName(
-                    classPath, true, pathClassLoader);
-            Method[] mm = handler.getDeclaredMethods();
-
-            for (Method m : mm) {
-                Log.d("Method", m.getName());
-            }
-
-            Method method = mm[0];
-
-            method.setAccessible(true);
-            //Object tttt = method.invoke(handler.newInstance(), new android.os.Bundle());
-            Object tttt = method.invoke(handler.newInstance());
-
-            Log.d("test" ,"test") ;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-     */
 
 
     /*
