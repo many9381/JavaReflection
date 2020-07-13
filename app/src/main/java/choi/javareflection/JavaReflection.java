@@ -9,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.util.TimeUtils;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
@@ -20,9 +21,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+
 import java.util.ArrayList;
+import java.util.TimeZone;
 
 import dalvik.system.PathClassLoader;
 
@@ -247,10 +251,16 @@ public class JavaReflection {
                 logString.append(String.format("%s: ", methodPara[i].getName().replace('.', '/')));
             }
             String timeDateText = "None";
+
+
+            timeDateText = ")" + new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(Calendar.getInstance().getTime());
+            /*
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
                 timeDateText = ") " + LocalDateTime.now().format(dateFormat);
             }
+
+             */
             logString.append(timeDateText);
 
             FileWriter fw = new FileWriter(filePath, true);
