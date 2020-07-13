@@ -1,2 +1,2 @@
 MainActivity,onCreate,Security,captureLock
-MainActivity,onCreate,Security,FIDO
+MainActivity,onCreate,Security,keyStroke

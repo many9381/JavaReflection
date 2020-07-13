@@ -10,21 +10,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Long now = System.nanoTime();
-        String classname = getClass().getSimpleName();
-        String method = new Exception().getStackTrace()[0].getMethodName();
-
-        String inputCurrentMethod = classname + '-' + method; //"ActivityName-MethodName"
-
-
-        JavaReflection reflection = new JavaReflection();
+        //String inputCurrentMethod = getClass().getSimpleName() + '-' + new Exception().getStackTrace()[0].getMethodName(); //"ActivityName-MethodName"
+        String inputCurrentMethod = "MainActivity-onCreate";
+        JavaReflection.getInstance(this).loadRaonApi(inputCurrentMethod, this,  System.nanoTime());;
 
         //getApplicationContext().getClass();
         //Context test = MainActivity.this;
-
-        reflection.loadRaonApi(inputCurrentMethod, this,  now);
-
-
 
         //reflection.activityCall(this, "MainActivity");
     }

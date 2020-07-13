@@ -9,6 +9,8 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.util.TimeUtils;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -19,15 +21,44 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+
 import java.util.ArrayList;
+import java.util.TimeZone;
 
 import dalvik.system.PathClassLoader;
 
 public class JavaReflection {
 
     private String CLASS_TAG = getClass().getSimpleName();
+    private static JavaReflection javaReflection = null;
+    private static ArrayList<String[]> policyLine = null;
+    private static String filePath = null;
+
+
+
+    private JavaReflection(Activity act) {
+        requestPermission(act);
+    }
+
+    /*
+        불필요하게 자주 반복되는 작업을 줄이기 위한
+        Singletone 클래스
+     */
+   public static JavaReflection getInstance(Activity act) {
+
+        if(javaReflection == null){
+            javaReflection = new JavaReflection(act);
+            policyLine = readExternal("/Download/sample.txt");
+            filePath = act.getFilesDir().getPath();
+        }
+        return javaReflection;
+    }
+
+
+
 
     public static Context getPackageContext(Context context, String packageName) {
         try {
@@ -40,7 +71,12 @@ public class JavaReflection {
 
     //activityCall(context, act);
 
-    public ArrayList<String[]> readExternal(String fileName) {
+
+    /*
+        외부 저장소에 있는 정책파일을 읽는 함수
+        줄 단위로 읽어서 ArrayList<String> 형태로 리
+     */
+    public static ArrayList<String[]> readExternal(String fileName) {
 
         File polyFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + '/' + fileName);
         if(!polyFile.exists()) {
@@ -52,8 +88,7 @@ public class JavaReflection {
             }
         }
 
-        ArrayList<String[]> policyLine = new ArrayList<String[]>();
-
+        ArrayList<String[]> readPolicyLine = new ArrayList<String[]>();
         try {
             FileReader stream = new FileReader(polyFile);
             BufferedReader bufferedReader = new BufferedReader(stream);
@@ -63,7 +98,7 @@ public class JavaReflection {
                     String line;
                     if (((line = bufferedReader.readLine()) != null)) {
                         String[] temp2 = line.split(",");
-                        policyLine.add(temp2);
+                        readPolicyLine.add(temp2);
                     }
                     else {
                         bufferedReader.close();
@@ -80,9 +115,13 @@ public class JavaReflection {
             e.printStackTrace();
         }
 
-        return policyLine;
+        return readPolicyLine;
     }
 
+    /*
+        외부 저장소에 접근하려면 권한이 필요하므로
+        필요한 권한 요청을 하기위한 함수
+     */
     private boolean requestPermission(Activity act){
 
         if (act.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -100,18 +139,34 @@ public class JavaReflection {
         return true;
     }
 
-    public void loadRaonApi(String currentClassMethod, Activity act, Long start) {
+    /*
+        보안 앱의 Context를 얻는 함수
+     */
+    private Class<?> getPluginClass(Activity act, String polyLibName) throws ClassNotFoundException {
+        Context pluginContext =
+                getPackageContext(act, "choi.security");
+        if (pluginContext == null) {
+            Toast.makeText(act, "Security App이 없습니다.", Toast.LENGTH_SHORT).show();
+            return null;
+        }
 
-        String filePath = act.getFilesDir().getPath();
+
+        return pluginContext.getClassLoader().
+                loadClass(String.format("choi.security.%s", polyLibName));
+
+    }
+
+
+    /*
+        보안 앱의 기능을 호출하는 함수
+     */
+    public void loadRaonApi(String currentClassMethod, Activity act, Long start) {
 
         //activityCall(act, "MainActivity");
 
+
+
         try {
-
-            ArrayList<String[]> policyLine = null;
-            requestPermission(act);
-            policyLine = readExternal("/Download/sample.txt");
-
 
             for (String[] str: policyLine) {
                 String polyClsName = str[0];
@@ -127,13 +182,8 @@ public class JavaReflection {
                     Log.e(CLASS_TAG, String.format("matching: %s : %s",
                             polyClsName, currentClassMethod));
 
-                    Context pluginContext =
-                            getPackageContext(act, "choi.security");
-                    if (pluginContext == null) return;
-                    ClassLoader classLoader = pluginContext.getClassLoader();
 
-                    Class<?> pluginClass =
-                            classLoader.loadClass(String.format("choi.security.%s", polyLibName));
+                    Class<?> pluginClass = getPluginClass(act, polyLibName);
 
                     String parentMethodName = currentClassMethod.split("-")[1];
                     logsSave(parentMethodName, filePath, act);
@@ -161,87 +211,14 @@ public class JavaReflection {
                 Log.e("reflection", String.format("Process Time(not): %d", end - start));
             }
 
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
+        } catch (ClassNotFoundException | IllegalAccessException |
+                InvocationTargetException | InstantiationException e) {
             e.printStackTrace();
         }
-
-
-
 
         //Object obj = classname.newInstance();
 
     }
-
-    /*
-    public void activityCall(Activity act, final String actName) {
-
-        final String clsName =  "choi.security";
-        ComponentName component =
-                new ComponentName(clsName, String.format("%s.%s", clsName, actName));
-        Intent intent = new Intent(Intent.ACTION_MAIN)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .addCategory(Intent.CATEGORY_LAUNCHER)
-                .setComponent(component);
-        act.startActivity(intent);
-
-
-
-            Class className = Class.forName("android.content.Intent");
-            ComponentName component = new ComponentName("com.example.security","com.example.security.MainActivity");
-            Object intent = className.newInstance();
-
-            Method methodSetAction = intent.getClass().getMethod("setAction", String.class);
-            methodSetAction.invoke(intent, "android.intent.action.MAIN");
-            Method methodAddCategory = intent.getClass().getMethod("addCategory", String.class);
-            methodAddCategory.invoke(intent, "android.intent.CATEGORY_LAUNCHER");
-            Method methodSetComponent = intent.getClass().getMethod("setComponent", ComponentName.class);
-            methodSetComponent.invoke(intent, component);
-
-            // TODO: 이렇게 강제 캐스팅 가능한지 확인 필요
-            context.startActivity((android.content.Intent) intent);
-
-
-
-
-    }
-
-    private void activityCall2(Context context, Activity act, final String actName) {
-
-        final String packagePath =  "choi.security";
-        final String classPath =  String.format("%s.%s", packagePath, actName);
-
-        try {
-            String apkName = context.getPackageManager().getApplicationInfo(
-                    packagePath, 0).sourceDir;
-            PathClassLoader pathClassLoader = new PathClassLoader(apkName,
-                    ClassLoader.getSystemClassLoader());
-            Class<Activity> handler = (Class<Activity>) Class.forName(
-                    classPath, true, pathClassLoader);
-            Method[] mm = handler.getDeclaredMethods();
-
-            for (Method m : mm) {
-                Log.d("Method", m.getName());
-            }
-
-            Method method = mm[0];
-
-            method.setAccessible(true);
-            //Object tttt = method.invoke(handler.newInstance(), new android.os.Bundle());
-            Object tttt = method.invoke(handler.newInstance());
-
-            Log.d("test" ,"test") ;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-     */
 
 
     /*
@@ -274,10 +251,16 @@ public class JavaReflection {
                 logString.append(String.format("%s: ", methodPara[i].getName().replace('.', '/')));
             }
             String timeDateText = "None";
+
+
+            timeDateText = ")" + new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(Calendar.getInstance().getTime());
+            /*
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
                 timeDateText = ") " + LocalDateTime.now().format(dateFormat);
             }
+
+             */
             logString.append(timeDateText);
 
             FileWriter fw = new FileWriter(filePath, true);
