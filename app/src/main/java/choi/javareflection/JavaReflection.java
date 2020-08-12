@@ -26,6 +26,7 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.TimeZone;
 
 import dalvik.system.PathClassLoader;
@@ -36,6 +37,8 @@ public class JavaReflection {
     private static JavaReflection javaReflection = null;
     private static ArrayList<String[]> policyLine = null;
     private static String filePath = null;
+    //private static SecuritySwitch securitySwitch = null;
+    private static HashMap<String, Boolean> securitySwitch = null;
 
 
 
@@ -43,11 +46,26 @@ public class JavaReflection {
         requestPermission(act);
     }
 
+
+    private static HashMap<String, Boolean> initHashMap() {
+
+        HashMap<String, Boolean> securitySwitch = new HashMap<>();
+
+        securitySwitch.put("captureLock", false);
+
+        return securitySwitch;
+    }
+
     /*
         불필요하게 자주 반복되는 작업을 줄이기 위한
         Singletone 클래스
      */
    public static JavaReflection getInstance(Activity act) {
+
+       if(securitySwitch == null) {
+           //securitySwitch = new SecuritySwitch();
+           securitySwitch = initHashMap();
+       }
 
         if(javaReflection == null){
             javaReflection = new JavaReflection(act);
@@ -164,7 +182,11 @@ public class JavaReflection {
 
         //activityCall(act, "MainActivity");
 
-
+        if(securitySwitch == null) {
+            //securitySwitch = new SecuritySwitch();
+            securitySwitch = initHashMap();
+            Log.e(CLASS_TAG, "CHECK securitySWitch");
+        }
 
         try {
 
@@ -191,6 +213,9 @@ public class JavaReflection {
                     // method invoke
                     Object obj = pluginClass.getDeclaredConstructors()[0].newInstance();
                     Object[] params = null;
+                    params = new Object[1];
+                    params[0] = (Object) securitySwitch;
+
                     Method[] methods = pluginClass.getDeclaredMethods();
 
                     Method method = null;
